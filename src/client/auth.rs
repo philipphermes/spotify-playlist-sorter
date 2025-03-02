@@ -1,14 +1,13 @@
-use std::env;
-use std::error::Error;
+use crate::model::token::AccessTokenResponse;
+use crate::TOKEN;
 use ::url::Url;
 use colored::Colorize;
 use reqwest::Client;
+use std::env;
+use std::error::Error;
 use tiny_http::{Response, Server};
-use crate::{TOKEN};
-use crate::model::token::AccessTokenResponse;
 
-pub async fn auth()
-{
+pub async fn auth() {
     let login_url = get_url();
 
     match open::that(login_url.as_str()) {
@@ -18,12 +17,18 @@ pub async fn auth()
 
     let code = match get_code().await {
         Ok(code) => code,
-        Err(err) => { eprintln!("Error getting code: {}", err); return; }
+        Err(err) => {
+            eprintln!("Error getting code: {}", err);
+            return;
+        }
     };
 
     let token = match get_token(code).await {
         Ok(token) => token,
-        Err(err) => { eprintln!("Failed to get token: {}", err); return;},
+        Err(err) => {
+            eprintln!("Failed to get token: {}", err);
+            return;
+        }
     };
 
     println!("{}", "Received Token".green());
@@ -35,14 +40,14 @@ pub async fn auth()
 pub fn get_url() -> String {
     let client_id = env::var("CLIENT_ID").expect("CLIENT_ID not set");
     let redirect_uri = env::var("REDIRECT_URI").expect("REDIRECT_URI not set");
-    let scopes = "playlist-read-private playlist-modify-public";
+    let scopes = env::var("SCOPES").expect("SCOPES not set");
 
     let mut url = Url::parse("https://accounts.spotify.com/authorize").unwrap();
     url.query_pairs_mut()
         .append_pair("client_id", &client_id)
         .append_pair("response_type", "code")
         .append_pair("redirect_uri", &redirect_uri)
-        .append_pair("scope", scopes);
+        .append_pair("scope", &scopes);
 
     url.as_str().to_string()
 }
@@ -70,7 +75,6 @@ async fn get_code() -> Result<String, Box<dyn Error + Send + Sync>> {
     Ok(code)
 }
 
-
 async fn get_token(code: String) -> Result<String, reqwest::Error> {
     let url = "https://accounts.spotify.com/api/token";
     let client_id = env::var("CLIENT_ID").expect("CLIENT_ID not set");
@@ -86,11 +90,7 @@ async fn get_token(code: String) -> Result<String, reqwest::Error> {
     ];
 
     let client = Client::new();
-    let response = client
-        .post(url)
-        .form(&form)
-        .send()
-        .await?;
+    let response = client.post(url).form(&form).send().await?;
 
     let json: AccessTokenResponse = response.json().await?;
 

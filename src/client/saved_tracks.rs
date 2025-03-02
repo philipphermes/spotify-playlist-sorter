@@ -1,22 +1,19 @@
 use reqwest::Client;
-use std::env;
+use crate::model::saved_tracks::SavedTrackResponse;
 
-pub async fn get_playlist(token: String) -> Result<String, Box<dyn std::error::Error>> {
-    let user_id = env::var("USER_ID").expect("USER_ID not set");
+pub async fn get_saved_tracks(token: String) -> Result<SavedTrackResponse, Box<dyn std::error::Error>> {
     let auth_header_value = format!("Bearer {}", token);
     let client = Client::new();
 
     let response = client
-        .get(format!(
-            "https://api.spotify.com/v1/users/{}/playlists",
-            user_id
-        ))
+        .get("https://api.spotify.com/v1/me/tracks?market=DE")
         .header("Authorization", auth_header_value)
         .send()
         .await?;
 
     let status = response.status();
-    let response_body = response.text().await?;
+
+    let response_body: SavedTrackResponse = response.json().await?;
 
     if status.is_success() {
         Ok(response_body)
