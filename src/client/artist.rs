@@ -10,14 +10,14 @@ pub async fn get_artists(token: String, artists: Vec<Artist>) -> Result<ArtistsR
     let mut artist_ids  = "".to_string();
 
     for artist in artists {
-        *artist_id_counts.entry(artist.id.clone()).or_insert(0) += 1;
-
-        if !artist_ids.contains(&artist.id) {
+        if !artist_id_counts.contains_key(&artist.id) {
             if !artist_ids.is_empty() {
                 artist_ids.push(',');
             }
             artist_ids.push_str(&artist.id);
         }
+
+        *artist_id_counts.entry(artist.id.clone()).or_insert(0) += 1;
     }
 
     let response = client
