@@ -11,7 +11,7 @@ pub async fn auth() {
     let login_url = get_url();
 
     match open::that(login_url.as_str()) {
-        Ok(()) => println!("{} {}", "Opened: ".green(), login_url.blue()),
+        Ok(()) => println!("\n{} {}", "Opened: ".green().bold(), login_url.blue()),
         Err(err) => eprintln!("An error occurred when opening '{}': {}", login_url, err),
     }
 
@@ -31,7 +31,7 @@ pub async fn auth() {
         }
     };
 
-    println!("{}", "Received Token".green());
+    println!("\n{}", "Received Token".green().bold());
 
     let mut global_token = TOKEN.lock().unwrap();
     *global_token = token;
