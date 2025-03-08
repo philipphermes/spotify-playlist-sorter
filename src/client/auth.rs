@@ -5,9 +5,38 @@ use colored::Colorize;
 use reqwest::Client;
 use std::env;
 use std::error::Error;
+use std::fs::File;
+use std::io::prelude::*;
 use tiny_http::{Response, Server};
+use std::time::{SystemTime, UNIX_EPOCH};
+use serde::{Deserialize, Serialize};
+use std::io::{Read, Write};
+
+#[derive(Serialize, Deserialize)]
+struct TokenData {
+    access_token: String,
+    expiration_time: u64,
+}
 
 pub async fn auth() {
+    if let Some(token_data) = read_token_from_file() {
+        let current_time = SystemTime::now()
+            .duration_since(UNIX_EPOCH)
+            .expect("Time went backwards")
+            .as_secs();
+
+        if current_time < token_data.expiration_time {
+            println!("\n{}", "Found valid token".green().bold());
+
+            let mut global_token = TOKEN.lock().unwrap();
+            *global_token = token_data.access_token;
+
+            return;
+        }
+
+        println!("\n{}", "Token expired. Fetching a new one...".yellow().bold());
+    }
+
     let login_url = get_url();
 
     match open::that(login_url.as_str()) {
@@ -23,18 +52,56 @@ pub async fn auth() {
         }
     };
 
-    let token = match get_token(code).await {
-        Ok(token) => token,
+    let (access_token, expires_in) = match get_token(code).await {
+        Ok((access_token, expires_in)) => (access_token, expires_in),
         Err(err) => {
             eprintln!("Failed to get token: {}", err);
             return;
         }
     };
 
-    println!("\n{}", "Received Token".green().bold());
+    let current_time = SystemTime::now()
+        .duration_since(UNIX_EPOCH)
+        .expect("Time went backwards")
+        .as_secs();
+    let expiration_time = current_time + expires_in;
+
+    let token_data = TokenData {
+        access_token: access_token.clone(),
+        expiration_time,
+    };
+
+    if let Err(err) = write_token_to_file(&token_data) {
+        eprintln!("Failed to write token to file: {}", err);
+        return;
+    }
+
+    println!("\n{}", "Received new token".green().bold());
 
     let mut global_token = TOKEN.lock().unwrap();
-    *global_token = token;
+    *global_token = access_token;
+}
+
+fn read_token_from_file() -> Option<TokenData> {
+    let mut contents = String::new();
+
+    if let Ok(mut file) = File::open("token.txt") {
+        if file.read_to_string(&mut contents).is_ok() {
+            if !contents.is_empty() {
+                if let Ok(token_data) = serde_json::from_str::<TokenData>(&contents) {
+                    return Some(token_data);
+                }
+            }
+        }
+    }
+
+    None
+}
+
+fn write_token_to_file(token_data: &TokenData) -> std::io::Result<()> {
+    let json = serde_json::to_string(&token_data).unwrap();
+    let mut file = File::create("token.txt")?;
+    file.write_all(json.as_bytes())
 }
 
 pub fn get_url() -> String {
@@ -75,7 +142,7 @@ async fn get_code() -> Result<String, Box<dyn Error + Send + Sync>> {
     Ok(code)
 }
 
-async fn get_token(code: String) -> Result<String, reqwest::Error> {
+async fn get_token(code: String) -> Result<(String, u64), reqwest::Error> {
     let url = "https://accounts.spotify.com/api/token";
     let client_id = env::var("CLIENT_ID").expect("CLIENT_ID not set");
     let client_secret = env::var("CLIENT_SECRET").expect("CLIENT_SECRET not set");
@@ -94,5 +161,5 @@ async fn get_token(code: String) -> Result<String, reqwest::Error> {
 
     let json: AccessTokenResponse = response.json().await?;
 
-    Ok(json.access_token)
+    Ok((json.access_token, json.expires_in))
 }

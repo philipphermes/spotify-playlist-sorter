@@ -25,15 +25,3 @@ Sorts playlists after genres
 ```shell
 cargo run
 ```
-
-## Dependencies
-
-* reqwest
-* tokio
-* serde
-* dotenv
-* url
-* open
-* tiny_http
-* colored
-* lazy_static
