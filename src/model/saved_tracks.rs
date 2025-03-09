@@ -1,5 +1,5 @@
 use crate::model::artist::Artist;
-use serde::Deserialize;
+use serde::{Deserialize, Serialize};
 
 #[derive(Deserialize, Debug, Clone)]
 pub struct SavedTrackResponse {
@@ -13,8 +13,9 @@ pub struct SavedTrack {
     pub track: Track,
 }
 
-#[derive(Deserialize, Debug, Clone)]
+#[derive(Deserialize, Debug, Clone, Serialize)]
 pub struct Track {
     pub id: String,
+    pub name: String,
     pub artists: Vec<Artist>,
 }
