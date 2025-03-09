@@ -4,7 +4,7 @@ use indicatif::ProgressBar;
 use reqwest::Client;
 
 pub async fn get_saved_tracks(token: String) -> Result<Vec<SavedTrack>, reqwest::Error> {
-    println!("\n{}", "Fetching liked songs".green().bold());
+    println!("\n\n{}", "Fetching liked songs".green().bold());
 
     let mut saved_tracks: Vec<SavedTrack> = Vec::new();
     let mut next_liked_track: Option<String> = None;

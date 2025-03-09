@@ -26,7 +26,7 @@ pub async fn auth() {
             .as_secs();
 
         if current_time < token_data.expiration_time {
-            println!("\n{}", "Found valid token".green().bold());
+            println!("\n\n{}", "Found valid token".green().bold());
 
             let mut global_token = TOKEN.lock().unwrap();
             *global_token = token_data.access_token;
@@ -34,13 +34,13 @@ pub async fn auth() {
             return;
         }
 
-        println!("\n{}", "Token expired. Fetching a new one...".yellow().bold());
+        println!("\n\n{}", "Token expired. Fetching a new one...".yellow().bold());
     }
 
     let login_url = get_url();
 
     match open::that(login_url.as_str()) {
-        Ok(()) => println!("\n{} {}", "Opened: ".green().bold(), login_url.blue()),
+        Ok(()) => println!("\n\n{} {}", "Opened: ".green().bold(), login_url.blue()),
         Err(err) => eprintln!("An error occurred when opening '{}': {}", login_url, err),
     }
 
@@ -55,7 +55,7 @@ pub async fn auth() {
     let (access_token, expires_in) = match get_token(code).await {
         Ok((access_token, expires_in)) => (access_token, expires_in),
         Err(err) => {
-            eprintln!("Failed to get token: {}", err);
+            eprintln!("\n\nFailed to get token: {}", err);
             return;
         }
     };
@@ -72,11 +72,11 @@ pub async fn auth() {
     };
 
     if let Err(err) = write_token_to_file(&token_data) {
-        eprintln!("Failed to write token to file: {}", err);
+        eprintln!("\n\nFailed to write token to file: {}", err);
         return;
     }
 
-    println!("\n{}", "Received new token".green().bold());
+    println!("\n\n{}", "Received new token".green().bold());
 
     let mut global_token = TOKEN.lock().unwrap();
     *global_token = access_token;
@@ -85,7 +85,7 @@ pub async fn auth() {
 fn read_token_from_file() -> Option<TokenData> {
     let mut contents = String::new();
 
-    if let Ok(mut file) = File::open("token.txt") {
+    if let Ok(mut file) = File::open("token.json") {
         if file.read_to_string(&mut contents).is_ok() {
             if !contents.is_empty() {
                 if let Ok(token_data) = serde_json::from_str::<TokenData>(&contents) {
@@ -100,7 +100,7 @@ fn read_token_from_file() -> Option<TokenData> {
 
 fn write_token_to_file(token_data: &TokenData) -> std::io::Result<()> {
     let json = serde_json::to_string(&token_data).unwrap();
-    let mut file = File::create("token.txt")?;
+    let mut file = File::create("token.json")?;
     file.write_all(json.as_bytes())
 }
 

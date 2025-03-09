@@ -1,29 +1,67 @@
 use reqwest::Client;
-use std::env;
+use colored::Colorize;
+use indicatif::ProgressBar;
+use crate::model::playlist::{Playlist, PlaylistResponse};
 
-pub async fn get_playlist(token: String) -> Result<String, Box<dyn std::error::Error>> {
-    let user_id = env::var("USER_ID").expect("USER_ID not set");
+pub async fn get_playlists(token: String) -> Result<Vec<Playlist>, reqwest::Error> {
+    println!("\n\n{}", "Fetching playlists".green().bold());
+
+    let mut playlists: Vec<Playlist> = Vec::new();
+    let mut next_playlists: Option<String> = None;
+
+    let mut playlist_pb = None;
+    let mut fetched_playlists: u64 = 0;
+    let mut total_playlists: u64 = 0;
+
+    loop {
+        let playlists_resp = fetch_playlists(token.clone(), next_playlists.clone()).await;
+
+        let mut playlists_response = match playlists_resp {
+            Ok(playlists) => playlists,
+            Err(err) => return Err(err),
+        };
+
+        playlists.append(&mut playlists_response.clone().items);
+        fetched_playlists += playlists_response.items.len() as u64;
+        next_playlists = playlists_response.next;
+
+        if total_playlists == 0 {
+            total_playlists = playlists_response.total;
+            playlist_pb = Some(ProgressBar::new(total_playlists));
+        }
+
+        if let Some(ref pb) = playlist_pb {
+            pb.set_position(fetched_playlists);
+        }
+
+        if next_playlists.is_none() {
+            if let Some(ref pb) = playlist_pb {
+                pb.finish_with_message("done");
+            }
+            break;
+        }
+    }
+
+    Ok(playlists)
+}
+
+async fn fetch_playlists(
+    token: String,
+    next: Option<String>,
+) -> Result<PlaylistResponse, reqwest::Error> {
     let auth_header_value = format!("Bearer {}", token);
     let client = Client::new();
 
+    let url = next.unwrap_or_else(|| String::from("https://api.spotify.com/v1/me/playlists?limit=20"));
+    let request_url = url.as_str();
+
     let response = client
-        .get(format!(
-            "https://api.spotify.com/v1/users/{}/playlists",
-            user_id
-        ))
+        .get(request_url)
         .header("Authorization", auth_header_value)
         .send()
         .await?;
 
-    let status = response.status();
-    let response_body = response.text().await?;
+    let response_body: PlaylistResponse = response.json().await?;
 
-    if status.is_success() {
-        Ok(response_body)
-    } else {
-        Err(Box::new(std::io::Error::new(
-            std::io::ErrorKind::Other,
-            "Failed to fetch token",
-        )))
-    }
+    Ok(response_body)
 }

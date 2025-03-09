@@ -5,6 +5,7 @@ use std::sync::Mutex;
 use colored::Colorize;
 use reqwest::Error;
 use crate::client::artist::get_artists;
+use crate::client::playlists::get_playlists;
 use crate::client::saved_tracks::get_saved_tracks;
 use crate::model::saved_tracks::SavedTrack;
 
@@ -31,16 +32,24 @@ async fn main() {
     auth::auth().await;
 
     let global_token = TOKEN.lock().unwrap();
+
+    let playlists = get_playlists(global_token.to_string()).await;
+
+    let _playlists = match playlists {
+        Ok(playlists) => playlists,
+        Err(_) => return,
+    };
+
     let saved_tracks = get_saved_tracks(global_token.to_string()).await;
 
-    let saved_trackss = match saved_tracks {
+    let saved_tracks = match saved_tracks {
         Ok(saved_track) => saved_track,
         Err(_) => return,
     };
 
     let mut artist_ids: Vec<String> = Vec::new();
 
-    for saved_track in saved_trackss {
+    for saved_track in saved_tracks {
         for artist in saved_track.track.artists {
             let artist_id = artist.id;
 
