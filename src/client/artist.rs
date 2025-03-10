@@ -10,7 +10,7 @@ pub async fn get_artists(token: String, artist_ids: Vec<String>) -> Result<Vec<A
 
     let mut fetched_artists: u64 = 0;
     let total_artists: u64 = artist_ids.len() as u64;
-    let mut artists_pb = ProgressBar::new(total_artists);
+    let artists_pb = ProgressBar::new(total_artists);
 
     let mut artist_search = "".to_string();
     let mut added_artists_to_search = 0;
@@ -27,7 +27,7 @@ pub async fn get_artists(token: String, artist_ids: Vec<String>) -> Result<Vec<A
         } else {
             let artists_resp = fetch_artists(token.clone(), artist_search).await;
 
-            let mut artist_response = match artists_resp {
+            let artist_response = match artists_resp {
                 Ok(artists) => artists,
                 Err(err) => return Err(err),
             };

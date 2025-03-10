@@ -16,7 +16,7 @@ pub async fn get_saved_tracks(token: String) -> Result<Vec<SavedTrack>, reqwest:
     loop {
         let playlists_resp = fetch_saved_tracks(token.clone(), next_liked_track.clone()).await;
 
-        let mut saved_track_response = match playlists_resp {
+        let saved_track_response = match playlists_resp {
             Ok(playlists) => playlists,
             Err(err) => return Err(err),
         };

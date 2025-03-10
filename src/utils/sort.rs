@@ -1,6 +1,6 @@
 use strsim::jaro_winkler;
 use crate::model::artist::Artist;
-use crate::model::playlist::Playlist;
+use crate::model::playlist::{Owner, Playlist};
 use crate::model::saved_tracks::{SavedTrack};
 
 pub fn sort(saved_tracks: Vec<SavedTrack>, playlists: &mut Vec<Playlist>, artists: Vec<Artist>) {
@@ -15,32 +15,54 @@ pub fn sort(saved_tracks: Vec<SavedTrack>, playlists: &mut Vec<Playlist>, artist
 }
 
 fn categorize_track(saved_track: SavedTrack, playlists: &mut Vec<Playlist>, threshold: f64) {
-    // Iterate through artists and check if their genres are available
     for artist in saved_track.track.clone().artists {
-        // Ensure genres are available before categorizing
         if let Some(genres) = artist.genres {
             for genre in genres {
                 if let Some(index) = find_best_match(&genre, playlists, threshold) {
-                    // Ensure playlist's tracks are initialized
                     if playlists[index].songs.is_none() {
                         playlists[index].songs = Some(Vec::new());
                     }
-                    // Now safely push the track
-                    playlists[index].songs.as_mut().unwrap().push(saved_track.track);
+
+                    playlists[index].songs.as_mut().unwrap().push(saved_track.track.clone());
                     return;
                 }
             }
         }
     }
 
-    // If no match is found, add the track to the "Miscellaneous" playlist
-    if let Some(index) = playlists.iter_mut().position(|p| p.name == "Miscellaneous") {
-        // Ensure playlist's tracks are initialized
+    let mut new_genre: String = String::from("Unsorted");
+
+    for artist in saved_track.clone().track.artists {
+        if new_genre != "Unsorted" {
+            break;
+        }
+
+        if let Some(genres) = artist.genres {
+            for genre in genres {
+                new_genre = genre;
+
+                break;
+            }
+        }
+    }
+
+    if let Some(index) = playlists.iter_mut().position(|p| p.name == new_genre) {
         if playlists[index].songs.is_none() {
             playlists[index].songs = Some(Vec::new());
         }
-        // Now safely push the track
-        playlists[index].songs.as_mut().unwrap().push(saved_track.track);
+
+        playlists[index].songs.as_mut().unwrap().push(saved_track.track.clone());
+    } else {
+        let new_playlist = Playlist {
+            id: new_genre.clone(),
+            name: new_genre.clone(),
+            owner: Owner {
+                id: String::from("auto-generated"),
+            },
+            songs: Some(vec![saved_track.track.clone()]),
+        };
+
+        playlists.push(new_playlist);
     }
 }
 

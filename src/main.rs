@@ -3,10 +3,10 @@ use dotenv::dotenv;
 use lazy_static::lazy_static;
 use std::sync::Mutex;
 use colored::Colorize;
+use prettytable::{Cell, Row, Table};
 use crate::client::artist::get_artists;
 use crate::client::playlists::get_playlists;
 use crate::client::saved_tracks::get_saved_tracks;
-use crate::model::playlist::{Owner, Playlist};
 use crate::utils::sort::sort;
 
 mod client;
@@ -70,28 +70,39 @@ async fn main() {
         Err(_) => return,
     };
 
-    let new_playlist = Playlist {
-        id: String::from("Miscellaneous"),
-        name: String::from("Miscellaneous"),
-        owner: Owner {
-            id: String::from("Miscellaneous")
-        },
-        songs: None,
-    };
-
-    playlists.push(new_playlist);
-
     sort(saved_tracks, &mut playlists, artists);
 
     for playlist in playlists {
-        println!("{}:", playlist.name.blue());
+        println!("{}", playlist.name.to_uppercase().bold().blue());
+
+        let mut table = Table::new();
+
+        table.add_row(Row::new(vec![
+            Cell::new("Song"),
+            Cell::new("Genres"),
+        ]));
 
         if let Some(songs) = playlist.songs {
             for track in songs {
-                println!("\t- {}", track.name.green());
+                let mut track_genres: Vec<String> = Vec::new();
+
+                for artist in track.artists {
+                    if let Some(genres) = artist.genres {
+                        for genre in genres {
+                            track_genres.push(genre);
+                        }
+                    }
+                }
+
+                table.add_row(Row::new(vec![
+                    Cell::new(&track.name),
+                    Cell::new(&track_genres.join(", ")),
+                ]));
             }
-        } else {
-            println!("\t{}", "No songs available in this playlist.".red());
         }
+
+        table.printstd();
+
+        println!();
     }
 }

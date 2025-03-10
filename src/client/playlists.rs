@@ -1,3 +1,4 @@
+use std::env;
 use reqwest::Client;
 use colored::Colorize;
 use indicatif::ProgressBar;
@@ -16,7 +17,7 @@ pub async fn get_playlists(token: String) -> Result<Vec<Playlist>, reqwest::Erro
     loop {
         let playlists_resp = fetch_playlists(token.clone(), next_playlists.clone()).await;
 
-        let mut playlists_response = match playlists_resp {
+        let playlists_response = match playlists_resp {
             Ok(playlists) => playlists,
             Err(err) => return Err(err),
         };
@@ -42,7 +43,17 @@ pub async fn get_playlists(token: String) -> Result<Vec<Playlist>, reqwest::Erro
         }
     }
 
-    Ok(playlists)
+    let user_id = env::var("USER_ID").expect("USER_ID not set");
+
+    let mut owned_playlists: Vec<Playlist> = Vec::new();
+
+    for playlist in playlists {
+        if playlist.owner.id == user_id {
+            owned_playlists.push(playlist);
+        }
+    }
+
+    Ok(owned_playlists)
 }
 
 async fn fetch_playlists(

@@ -6,7 +6,6 @@ use reqwest::Client;
 use std::env;
 use std::error::Error;
 use std::fs::File;
-use std::io::prelude::*;
 use tiny_http::{Response, Server};
 use std::time::{SystemTime, UNIX_EPOCH};
 use serde::{Deserialize, Serialize};
