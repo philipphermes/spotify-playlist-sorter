@@ -1,3 +1,5 @@
+use std::io::{stdin, stdout, Write};
+use std::process::exit;
 use crate::client::auth;
 use dotenv::dotenv;
 use lazy_static::lazy_static;
@@ -5,7 +7,7 @@ use std::sync::Mutex;
 use colored::Colorize;
 use prettytable::{Cell, Row, Table};
 use crate::client::artist::get_artists;
-use crate::client::playlists::get_playlists;
+use crate::client::playlists::{add_to_playlist, get_playlists};
 use crate::client::saved_tracks::get_saved_tracks;
 use crate::utils::sort::sort;
 
@@ -55,10 +57,8 @@ async fn main() {
 
     for saved_track in saved_tracks.clone() {
         for artist in saved_track.track.artists {
-            let artist_id = artist.id;
-
-            if !artist_ids.contains(&artist_id) {
-                artist_ids.push(artist_id);
+            if !artist_ids.contains(&artist.id.clone()) {
+                artist_ids.push(artist.id.clone());
             }
         }
     }
@@ -72,7 +72,7 @@ async fn main() {
 
     sort(saved_tracks, &mut playlists, artists);
 
-    for playlist in playlists {
+    for playlist in playlists.clone() {
         println!("{}", playlist.name.to_uppercase().bold().blue());
 
         let mut table = Table::new();
@@ -82,7 +82,7 @@ async fn main() {
             Cell::new("Genres"),
         ]));
 
-        if let Some(songs) = playlist.songs {
+        if let Some(songs) = playlist.clone().songs {
             for track in songs {
                 let mut track_genres: Vec<String> = Vec::new();
 
@@ -102,7 +102,34 @@ async fn main() {
         }
 
         table.printstd();
+    }
 
-        println!();
+    let mut should_save = String::from("yes");
+    println!("\n\nDoes this look good to you? (yes/no) [yes]");
+    let _=stdout().flush();
+    stdin().read_line(&mut should_save).expect("Did not enter a correct string");
+
+    if let Some('\n')=should_save.chars().next_back() {
+        should_save.pop();
+    }
+    if let Some('\r')=should_save.chars().next_back() {
+        should_save.pop();
+    }
+
+    if (should_save != "yes") {
+        return;
+    }
+
+    for playlist in playlists {
+        let resp = add_to_playlist(global_token.to_string(), playlist).await;
+
+        match resp {
+            Ok(artist) => artist,
+            Err(err) => {
+                println!("{:?}", err);
+
+                return;
+            },
+        };
     }
 }

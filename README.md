@@ -25,3 +25,6 @@ Sorts playlists after genres
 ```shell
 cargo run
 ```
+
+### Notices
+* currently spotify creates public playlist even if you provide public = false

@@ -20,3 +20,13 @@ pub struct Playlist {
 pub struct Owner {
     pub id: String,
 }
+
+#[derive(Deserialize, Debug, Clone)]
+pub struct PlaylistCreateResponse {
+    pub id: String,
+}
+
+#[derive(Deserialize, Debug, Clone)]
+pub struct PlaylistAddResponse {
+    pub snapshot_id: String,
+}
